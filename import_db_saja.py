@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 # ==========================================================================
 BASE_DIR = Path(__file__).parent.resolve()
 
-# ⚠️ SESUAIKAN NAMA FOLDER DATABASE DENGAN YANG ADA DI REPO ANDA
+# ✅ FIX: Gunakan nama folder database_hasil5
 DB_PATH = str(BASE_DIR / "database_hasil5" / "database.sqlite") 
 RSS_FILE = str(BASE_DIR / "rss_list.txt")
 
@@ -53,7 +53,7 @@ def inisialisasi_database():
         )
     """)
     
-    # Cek apakah kolom baru sudah ada (tambahkan jika belum)
+    # Cek apakah kolom baru sudah ada
     cursor.execute("PRAGMA table_info(artikel)")
     columns = [col[1] for col in cursor.fetchall()]
     if 'gambar' not in columns: cursor.execute("ALTER TABLE artikel ADD COLUMN gambar TEXT")
@@ -74,12 +74,10 @@ def ekstrak_konten(url):
         
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # Ambil Gambar
         gambar = None
         og_image = soup.find('meta', property='og:image') or soup.find('meta', attrs={'name': 'og:image'})
         if og_image and og_image.get('content'): gambar = og_image['content']
 
-        # Ambil Tanggal
         tanggal = None
         for meta_prop in ['article:published_time', 'article:modified_time', 'datePublished']:
             meta = soup.find('meta', property=meta_prop) or soup.find('meta', attrs={'name': meta_prop})
@@ -87,7 +85,6 @@ def ekstrak_konten(url):
                 tanggal = meta['content']
                 break
 
-        # Ambil Paragraf
         paragraphs = soup.find_all('p')
         teks_lengkap = []
         for p in paragraphs:
@@ -114,7 +111,6 @@ def proses_feed(feed_url):
         conn = sqlite3.connect(DB_PATH, timeout=15)
         cursor = conn.cursor()
 
-        # Ambil 5 artikel terbaru per feed
         for entry in feed.entries[:5]:
             link = entry.get('link', '')
             judul = entry.get('title', 'Tanpa Judul')
@@ -132,7 +128,6 @@ def proses_feed(feed_url):
             if not tanggal:
                 tanggal = datetime.now().isoformat()
 
-            # Susun konten
             img_tag = f'<div style="text-align:center; margin-bottom:20px;"><img src="{gambar}" alt="{judul}" style="max-width:100%; height:auto;"></div>' if gambar else ""
             konten_lengkap = f"{img_tag}\n{ADSTERRA_CODE}\n{html_teks}\n{ADSTERRA_CODE}"
 
@@ -159,7 +154,7 @@ def proses_feed(feed_url):
 # ==========================================================================
 if __name__ == "__main__":
     print("=" * 50)
-    print("MULAI IMPORT KE DATABASE (TANPA EXPORT)")
+    print("MULAI IMPORT KE DATABASE")
     print("=" * 50)
     
     if not os.path.exists(RSS_FILE):
