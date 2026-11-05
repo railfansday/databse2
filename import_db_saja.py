@@ -9,10 +9,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 
 # ==========================================================================
-# KONFIGURASI PATH (PORTABEL UNTUK GITHUB ACTIONS)
+# KONFIGURASI PATH
 # ==========================================================================
 BASE_DIR = Path(__file__).parent.resolve()
-DB_PATH = str(BASE_DIR / "database_5menit" / "database.sqlite")
+
+# ⚠️ SESUAIKAN NAMA FOLDER DATABASE DENGAN YANG ADA DI REPO ANDA
+DB_PATH = str(BASE_DIR / "database_hasil5" / "database.sqlite") 
 RSS_FILE = str(BASE_DIR / "rss_list.txt")
 
 HEADERS = {
@@ -32,7 +34,10 @@ ADSTERRA_CODE = """
 # FUNGSI DATABASE
 # ==========================================================================
 def inisialisasi_database():
-    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    # Pastikan folder database ada
+    db_dir = os.path.dirname(DB_PATH)
+    os.makedirs(db_dir, exist_ok=True)
+    
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
@@ -82,7 +87,7 @@ def ekstrak_konten(url):
                 tanggal = meta['content']
                 break
 
-        # Ambil Paragraf (bersihkan teks sampah)
+        # Ambil Paragraf
         paragraphs = soup.find_all('p')
         teks_lengkap = []
         for p in paragraphs:
@@ -102,7 +107,6 @@ def proses_feed(feed_url):
     duplikat = 0
 
     try:
-        # Gunakan requests dulu agar tidak hang
         resp = requests.get(feed_url, headers=HEADERS, timeout=8)
         if resp.status_code != 200: return 0, 0
         
@@ -110,19 +114,17 @@ def proses_feed(feed_url):
         conn = sqlite3.connect(DB_PATH, timeout=15)
         cursor = conn.cursor()
 
-        # Ambil 5 artikel terbaru saja per feed
+        # Ambil 5 artikel terbaru per feed
         for entry in feed.entries[:5]:
             link = entry.get('link', '')
             judul = entry.get('title', 'Tanpa Judul')
             if not link: continue
 
-            # Cek duplikat
             cursor.execute("SELECT id FROM artikel WHERE link = ?", (link,))
             if cursor.fetchone():
                 duplikat += 1
                 continue
 
-            # Ekstrak konten
             html_teks, gambar, tanggal = ekstrak_konten(link)
             if not html_teks:
                 html_teks = f"<p>{entry.get('summary', 'Konten tidak tersedia.')}</p>"
@@ -130,7 +132,7 @@ def proses_feed(feed_url):
             if not tanggal:
                 tanggal = datetime.now().isoformat()
 
-            # Susun konten dengan iklan
+            # Susun konten
             img_tag = f'<div style="text-align:center; margin-bottom:20px;"><img src="{gambar}" alt="{judul}" style="max-width:100%; height:auto;"></div>' if gambar else ""
             konten_lengkap = f"{img_tag}\n{ADSTERRA_CODE}\n{html_teks}\n{ADSTERRA_CODE}"
 
@@ -173,7 +175,6 @@ if __name__ == "__main__":
     
     total_baru, total_duplikat = 0, 0
     
-    # Batasi 5 worker agar aman
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = {executor.submit(proses_feed, url): url for url in rss_urls}
         for future in as_completed(futures):
