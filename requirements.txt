@@ -5,6 +5,5 @@ lxml
 python-dateutil
 bleach
 pip 
-install
 google-auth 
 google-auth-httplib2 
