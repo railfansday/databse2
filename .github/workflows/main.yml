@@ -1,11 +1,47 @@
+name: Scrape dan Simpan ke Database
+
+on:
+  workflow_dispatch:          # Bisa dijalankan manual
+  schedule:
+    - cron: '0 */6 * * *'     # Opsional: otomatis tiap 6 jam
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ✅ HANYA JALANKAN SKRIP DATABASE
       - name: Jalankan Import Database
         run: python import_db_saja.py
 
+      # ✅ SIMPAN DATABASE KE REPO
       - name: Commit & Push Database
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Hanya simpan folder database
           git add database_5menit/ || true
-          git diff --staged --quiet && echo "Tidak ada data baru" && exit 0
+          
+          git diff --staged --quiet && echo "Tidak ada artikel baru" && exit 0
+          
           git commit -m "Update database otomatis [skip ci]"
           git push
