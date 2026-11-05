@@ -28,20 +28,24 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ✅ HANYA JALANKAN SKRIP DATABASE
+      # ✅ JALANKAN SKRIP DATABASE
       - name: Jalankan Import Database
         run: python import_db_saja.py
 
-      # ✅ SIMPAN DATABASE KE REPO
+      # ✅ COMMIT & PUSH DATABASE
       - name: Commit & Push Database
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Hanya simpan folder database
-          git add database_5menit/ || true
+          # ✅ FIX: Tambahkan folder yang benar (database_hasil5)
+          git add database_hasil5/ || true
+          
+          # Cadangan: jika ada file lain yang berubah
+          git add . || true
           
           git diff --staged --quiet && echo "Tidak ada artikel baru" && exit 0
           
           git commit -m "Update database otomatis [skip ci]"
+          git pull --rebase origin main || true
           git push
